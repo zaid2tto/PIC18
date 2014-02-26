@@ -4,7 +4,7 @@
 ;****NOTE: Now CONFIGURED FOR 32 Mhz***************;
 ;*********************************************;
 
-	
+
 	;Declare unbanked variables (at 0x70 and on)
 	udata
 lcd_tmp	res	1
@@ -20,7 +20,7 @@ WRT_LCD macro val
 	movlw   val
 	call    WrtLCD
 	endm
-	
+
 ;Delay: ~44us
 ;LCD_DELAY macro
 ;	movlw   0x23
@@ -39,7 +39,7 @@ endm
 InitLCD
 
 	;bsf PORTD,E     ;E default high
-	
+
 	;Wait for LCD POR to finish (~15ms)
 	call lcdLongDelay
 	call lcdLongDelay
@@ -122,7 +122,7 @@ return
 ;    decfsz lcd_d2,f
 ;    goto LLD_LOOP
 ;    return
-    
+
     end
 
 
