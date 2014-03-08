@@ -1,16 +1,19 @@
-
+;**************************USE THIS ONE*****************************************
 #include <p18f4620.inc>
 #include <lcd18.inc>
 ; no longer 10Mhz #include <delays.inc>
 #include <delays32.inc>
+;#include <delays.inc>
+
 
 		list P=18F4620, F=INHX32, C=160, N=80, ST=OFF, MM=OFF, R=DEC
 
 ;;;;;;Configuration Bits;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 		CONFIG OSC=INTIO67;OSC=HS INTERNAL OSCILLATOR!
+        ;CONFIG OSC=HS
         CONFIG FCMEN=OFF, IESO=OFF
-		CONFIG PWRT = OFF, BOREN = SBORDIS, BORV = 3
+		CONFIG PWRT = OFF, BOREN = ON, BORV = 3
 		CONFIG WDT = OFF, WDTPS = 32768
 		CONFIG MCLRE = ON, LPT1OSC = OFF, PBADEN = OFF, CCP2MX = PORTC
 		CONFIG STVREN = ON, LVP = OFF, XINST = OFF
@@ -59,7 +62,7 @@ Again:
 		  tblrd+*
 		  movf		TABLAT, W
 		  bnz		Again
-          
+
 endm
 
 LCDSettings macro
@@ -73,7 +76,7 @@ LCDSettings macro
           movlw     B'00000001'    ; Clear ram
           call      WR_INS
 endm
-       
+
 ;*******************************VECTORS*****************************************
 			org		0x0000
 			goto	Mainline
@@ -127,15 +130,27 @@ Mainline
     movwf		OSCCON
 	bsf         OSCTUNE, 6  ;activate PLL multiplier to boost to 32Mhz
 
-		  clrf		TRISA
+
+         
+
+          clrf		TRISA
 		  clrf		TRISB
 		  clrf		TRISC
 		  clrf		TRISD
-		  call      delay5ms		;wait for LCD to start up
+;*****CLEARING IS IMPORTANT SO is calling InitLCD
+         clrf      PORTA
+         clrf      PORTB
+         clrf      PORTC
+         clrf      PORTD
+
+          call      delay5ms		;wait for LCD to start up
           call      delay5ms
 
+          ;*VERY IMP*
+          call      InitLCD
           LCDSettings
 ;;;;;;;;;;Display first prompt
+          ;call  ClrLCD
           load_table  Greeting
           call      Switch_Lines
           load_table  Testing_Prompt
@@ -165,21 +180,21 @@ test     btfss		PORTB,1   ;Wait until data is available from the keypad
          load_table Testing_Msg
          call       delay3s
 
-;         call       ClrLCD
-;         load_table Stage1_Msg
-;
-;         call       delay3s
-;
-;         call       ClrLCD
-;         load_table Testing_Msg
-;
-;         call       delay3s
-;         call       delay3s
-;
-;         call       ClrLCD
-;         load_table Stage2_Msg
-;
-;         call       delay3s
+         call       ClrLCD
+         load_table Stage1_Msg
+
+         call       delay3s
+
+         call       ClrLCD
+         load_table Testing_Msg
+
+         call       delay3s
+         call       delay3s
+
+         call       ClrLCD
+         load_table Stage2_Msg
+
+         call       delay3s
 
 Summary
          ;movlw      B'00000000' ;it's just not happening!!!! why????!!!
@@ -199,7 +214,7 @@ Summary
          call       CheckB
          call       delay0.5s
          call       CheckB
-         
+
          call       ClrLCD
          load_table SummaryM2_a
          call       Switch_Lines
@@ -273,7 +288,7 @@ Stop      goto      Stop
 ; Input  : W
 ; output : -
 ;****************************************
-WR_INS   
+WR_INS
 
 		bcf		RS	  				; clear Register Status bit
 		movwf	temp_lcd			; store instruction
@@ -298,7 +313,7 @@ WR_INS
 ; Input  : W
 ; Output : -
 ;***************************************
-WR_DATA   
+WR_DATA
 
 		bcf		RS					; clear Register Status bit
         movwf   dat				; store character
@@ -317,7 +332,7 @@ WR_DATA
 		nop
 		bcf		E
 
-		call	delay44us		
+		call	delay44us
 
         return
 
@@ -331,3 +346,5 @@ Switch_Lines
 
 
 end
+
+

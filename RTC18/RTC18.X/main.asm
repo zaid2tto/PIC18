@@ -85,7 +85,7 @@ Mainline
 		 ;Used to set up time in RTC, load to the PIC when RTC is used for the first time
 		; call	   set_rtc_time         ;comment afterwards
 
-         call      InitLCD    ;*NOTE: This InitLCD is different than the one in main project code: the settings are different
+         call      InitLCD    ;*NOTE: This InitLCD is different than the one in main project code: the settings are different; Not anymore!
          LCDSettings
 
 show_RTC

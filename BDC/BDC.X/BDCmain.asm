@@ -1,4 +1,3 @@
-
 #include <p18f4620.inc>
 #include <lcd18.inc>
 ; no longer 10Mhz #include <delays.inc>
@@ -59,7 +58,7 @@ Again:
 		  tblrd+*
 		  movf		TABLAT, W
 		  bnz		Again
-          
+
 endm
 
 LCDSettings macro
@@ -73,7 +72,7 @@ LCDSettings macro
           movlw     B'00000001'    ; Clear ram
           call      WR_INS
 endm
-       
+
 ;*******************************VECTORS*****************************************
 			org		0x0000
 			goto	Mainline
@@ -114,7 +113,7 @@ SummaryM2_b
         db      "Press C: Summary",0
 
 TimeSummary
-        db      "Tot.Time:XXX sec",0
+        db      "Tot.Time:",0
 
 
 
@@ -131,9 +130,16 @@ Mainline
 		  clrf		TRISB
 		  clrf		TRISC
 		  clrf		TRISD
+         ;*****CLEARING IS IMPORTANT SO is calling InitLCD
+         clrf      PORTA
+         clrf      PORTB
+         clrf      PORTC
+         clrf      PORTD
+
 		  call      delay5ms		;wait for LCD to start up
           call      delay5ms
 
+          call      InitLCD
           LCDSettings
 ;;;;;;;;;;Display first prompt
           load_table  Greeting
@@ -199,7 +205,7 @@ Summary
          call       CheckB
          call       delay0.5s
          call       CheckB
-         
+
          call       ClrLCD
          load_table SummaryM2_a
          call       Switch_Lines
@@ -228,6 +234,7 @@ CheckB
          clrf       PORTB
          call       ClrLCD
          load_table TimeSummary
+         call       testBCD ;;;;;;;;TESTING
          goto       Check0
 
 CheckC
@@ -273,7 +280,7 @@ Stop      goto      Stop
 ; Input  : W
 ; output : -
 ;****************************************
-WR_INS   
+WR_INS
 
 		bcf		RS	  				; clear Register Status bit
 		movwf	temp_lcd			; store instruction
@@ -298,7 +305,7 @@ WR_INS
 ; Input  : W
 ; Output : -
 ;***************************************
-WR_DATA   
+WR_DATA
 
 		bcf		RS					; clear Register Status bit
         movwf   dat				; store character
@@ -317,7 +324,7 @@ WR_DATA
 		nop
 		bcf		E
 
-		call	delay44us		
+		call	delay44us
 
         return
 
@@ -327,7 +334,112 @@ Switch_Lines
 		call	WR_INS
 		return
 
+;************************Binary to Digital Converter*************************
+cblock
+    BIN
+    count
+    huns
+    tens
+    ones
+endc
 
+testBCD
+movlw   B'11111111'; input binary 16
+;call    WR_DATA
+movwf   BIN
+call    BIN2BCD
+movff   huns,WREG
+call    WR_DATA
+movff   tens,WREG
+call    WR_DATA
+movff   tens,WREG
+call    WR_DATA
+return
+
+BIN2BCD
+        movlw 8
+        movwf count
+        clrf huns
+        clrf tens
+        clrf ones
+
+BCDADD3
+        movlw 5
+        subwf huns, 0
+        btfsc STATUS, C
+        CALL ADD3HUNS
+
+        movlw 5
+        subwf tens, 0
+        btfsc STATUS, C
+        CALL ADD3TENS
+
+        movlw 5
+        subwf ones, 0
+        btfsc STATUS, C
+        CALL ADD3ONES
+
+        decf count, 1
+        bcf STATUS, C
+        rlcf BIN, 1
+        rlcf ones, 1
+        btfsc ones,4 ;
+        CALL CARRYONES
+        rlcf tens, 1
+
+        btfsc tens,4 ;
+        CALL CARRYTENS
+        rlcf huns,1
+        bcf STATUS, C
+
+        movf count, 0
+        btfss STATUS, Z
+        GOTO BCDADD3
+
+
+        movf huns, 0 ; add ASCII Offset
+        addlw h'30'
+        movwf huns
+
+        movf tens, 0 ; add ASCII Offset
+        addlw h'30'
+        movwf tens
+
+        movf ones, 0 ; add ASCII Offset
+        addlw h'30'
+        movwf ones
+
+        RETURN
+
+ADD3HUNS
+        movlw 3
+        addwf huns,1
+
+        RETURN
+
+ADD3TENS
+        movlw 3
+        addwf tens,1
+
+        RETURN
+
+ADD3ONES
+        movlw 3
+        addwf ones,1
+
+        RETURN
+
+CARRYONES
+        bcf ones, 4
+        bsf STATUS, C
+        RETURN
+
+CARRYTENS
+        bcf tens, 4
+        bsf STATUS, C
+        RETURN
 
 
 end
+
+
