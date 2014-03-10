@@ -5,7 +5,8 @@
 #include <delays32.inc>
 ;#include <delays.inc>
 #include <Motor.inc>
-;#include <IRdetectors.inc>
+#include <IRdetectors.inc>
+
 
 		list P=18F4620, F=INHX32, C=160, N=80, ST=OFF, MM=OFF, R=DEC
 
@@ -44,21 +45,34 @@ dat       EQU       0x21           ; buffer for data
 
 
 ;defines global IR variables
-    temp EQU 0x74
-    IR1 EQU 0x75
-    IR2 EQU 0x76
-    IR3 EQU 0x77
-    IR4 EQU 0x78
-    IR5 EQU 0x79
-    IR6 EQU 0x80
-    IR7 EQU 0x81
-    IR8 EQU 0x82
-    IR9 EQU 0x83
+    
+;YES IR works in a separate file!
+udata
+    temp res 1
+    IR1 res 1
+    IR2 res 1
+    IR3 res 1
+    IR4 res 1
+    IR5 res 1
+    IR6 res 1
+    IR7 res 1
+    IR8 res 1
+    IR9 res 1
+
+global  temp, IR1, IR2, IR3, IR4, IR5, IR6, IR7, IR8, IR9
 
 
+;    temp EQU 0x74
+;    IR2 EQU 0x76
+;    IR3 EQU 0x77
+;    IR4 EQU 0x78
+;    IR5 EQU 0x79
+;    IR6 EQU 0x80
+;    IR7 EQU 0x81
+;    IR8 EQU 0x82
+;    IR9 EQU 0x83
 
 
-;global IR1, IR2
 ;******************************MACROS*******************************************
 load_table macro Table
           movlw		upper Table
@@ -77,6 +91,20 @@ Again:
 		  bnz		Again
 
 endm
+
+;IRTester    macro   IRx, P, A
+;        call    delay44us
+;        call    delay44us
+;        btfss   IRx,0
+;        local   loadA
+;        load_table  P
+;        local   next_1
+;loadA:
+;        load_table  A
+;next_1:
+;
+;endm
+
 
 LCDSettings macro
           movlw     B'00101000'    ; 4 bits, 2 lines,5X7 dots seems to work best instead of the above setting
@@ -111,12 +139,18 @@ Stage1_Msg
         db      "Switches Are On",0
 Stage2_Msg
         db      "IR Testing Done",0
+Stage3_Msg
+        db      "Light detection",0
+Stage3b_Msg
+        db      "Complete",0
+Stage4_Msg
+        db      "Switches off",0
 Time_Msg
         db      "Time:hh:mm",0
 Results_1
-        db      "Pass:",0
+        db      "CNDL:",0       ;shows the present candles
 Results_2
-        db      "Fail:",0
+        db      "Pass:",0       ;display Y/N for pass fail
 Test_Again
         db      "Test Again? Press *",0
 
@@ -128,10 +162,10 @@ SummaryM2_a
         db      "Press B: Time",0
 SummaryM2_b
         db      "Press C: Summary",0
-Present
-        db      "Light Present",0
-Absent
-        db      "Light Absent",0
+Candle_P
+        db      "Candle Present",0
+Candle_A
+        db      "Candle Absent",0
 TimeSummary
         db      "Tot.Time:XXX sec",0
 
@@ -216,162 +250,335 @@ test     btfss		PORTB,1   ;Wait until data is available from the keypad
          call   delay1s
          call   delay1s
          call   ClrLCD
+         call   delay0.5s
+         
 
+;**************IMP IR RESULT TELLER******************************
+;         btfss  IR1,0 ;if high skip, meaning present
+;         goto   loadA
+;         load_table Candle_P;present
+;         goto   next_1
+;loadA
+;        load_table  Candle_A
+;        goto    next_1
+;
+;next_1
+;        call    delay3s
+
+;******************************************************************************
+;IRTester    IR1, Candle_P, Candle_A
+;call    delay3s
+
+;here goto here
+
+
+;         ;call startLD ---->WORK ON NEXT!
+        load_table Testing_Msg ;next stuff after block
+        call  ClrLCD
+        load_table  Stage3_Msg
+        call    Switch_Lines
+        load_table  Stage3b_Msg
+        call    delay3s
+
+;         ; reset ports/bits
+         call   MotorLeft  ;--->WORKS TESTED
+         call   delay44us
+         call   ClrLCD
+         load_table Stage4_Msg  ;Switches off
+         call   delay1s
+         call   delay1s
+         call   delay0.5s
+
+
+
+         goto   summaryMenu
+
+summaryMenu
+         ;movlw      B'00000000' ;it's just not happening!!!! why????!!!
+         ;movwf      PORTB
+         ;clrf       PORTB
+         call       ClrLCD
+         load_table SummaryM1_a ;choose candle #
+         call       Switch_Lines
+         load_table SummaryM1_b ;to Display details or...
+         call       delay0.5s
+         call       CheckB
+         call       delay0.5s
+         call       CheckB
+         call       delay0.5s
+         call       CheckB
+         call       delay0.5s
+         call       CheckB
+         call       delay0.5s
+         call       CheckB
+
+         call       ClrLCD
+         load_table SummaryM2_a
+         call       Switch_Lines
+         load_table SummaryM2_b
+         call       delay0.5s
+         call       CheckB
+         call       delay0.5s
+         call       CheckB
+         call       delay0.5s
+         call       CheckB
+         call       delay0.5s
+         call       CheckB
+         call       delay0.5s
+         call       CheckB
+         goto       summaryMenu
+
+;*****PERIODICAL CHECKING INPUT SUBROUTINE************************
+CheckB
+         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
+         andlw		0x0F
+;test for B key input: Summary
+         sublw      b'0111'     ;subtract 3 from W: corresponds to letter B on keypad
+         btfss      STATUS,2    ;check if the z bit is 1--> letter C is pressed indeed: previous operation is success
+         goto       CheckC        ;otherwise keep checking ******CHANGE
+         ;now if B is pressed
+         clrf       PORTB
+         call       ClrLCD
+         load_table TimeSummary     ;******CHANGE
+         goto       Check0
+
+CheckC
+         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
+         andlw		0x0F
+;test for C key input: Summary
+         sublw      b'1011'     ;subtract 3 from W: corresponds to letter C on keypad
+         btfss      STATUS,2    ;check if the z bit is 1--> letter C is pressed indeed: previous operation is success
+         goto       Check1           ;***Change
+;old code         return;*************************RETURNS HERE***************************
+         ;now if C is pressed
+         clrf       PORTB
+         call       ClrLCD
+         load_table Results_1       ;*Change
+         call       Switch_Lines
+         load_table Results_2
+         goto       Check0
+
+Check1
+         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
+         andlw		0x0F
+;test for 1 key input: Summary
+         sublw      b'0000'     
+         btfss      STATUS,2    
+         goto       Check2           
+         ;now if 1 is pressed
+         clrf       PORTB
+         call       ClrLCD
+         ;CHECK IR BIT
          btfss  IR1,0 ;if high skip, meaning present
-         goto   loadA
-         load_table Present;present
-         goto   next_1
-loadA
-        load_table  Absent
-        goto    next_1
+         goto   load1
+         load_table Candle_P;present
+         goto   nxt_1
+load1
+         load_table  Candle_A
+         goto    nxt_1
 
-next_1
-;         clrf   TRISD;outputs
-;         ;clrf   PORTD
-;
-;         movff  IR1,WREG
-;         movwf  PORTD
-        ; call   delay10s
-here goto here
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;;btfsc  IR1,0 ;skip if clear=load absent
-;;            goto setPresent
-;;         load_table Absent
-;;         goto nextLine
-;;
-;;setPresent load_table Present
-;;
-;;nextLine
-;;         call Switch_Lines
-;;         btfsc  IR2,0 ;skip if clear
-;;            goto setPresent2
-;;         load_table Absent
-;;         goto nextLine2
-;;
-;;setPresent2 load_table Present
-;;
-;;nextLine2
-;
-;         here goto here
-;
-;         ; reset ports/bits
-;         ;call startLD
-;         ; reset ports/bits
-;         call   MotorLeft
-;         call   delay1s
-;         ;call   Summary
-;
-;
-;         call       delay3s
-;
-;         call       ClrLCD
-;         load_table Stage1_Msg
-;
-;         call       delay3s
-;
-;         call       ClrLCD
-;         load_table Testing_Msg
-;
-;         call       delay3s
-;         call       delay3s
-;
-;         call       ClrLCD
-;         load_table Stage2_Msg
-;
-;         call       delay3s
-;
-;Summary
-;         ;movlw      B'00000000' ;it's just not happening!!!! why????!!!
-;         ;movwf      PORTB
-;         ;clrf       PORTB
-;         call       ClrLCD
-;         load_table SummaryM1_a ;choose candle #
-;         call       Switch_Lines
-;         load_table SummaryM1_b ;to Display details or...
-;         call       delay0.5s
-;         call       CheckB
-;         call       delay0.5s
-;         call       CheckB
-;         call       delay0.5s
-;         call       CheckB
-;         call       delay0.5s
-;         call       CheckB
-;         call       delay0.5s
-;         call       CheckB
-;
-;         call       ClrLCD
-;         load_table SummaryM2_a
-;         call       Switch_Lines
-;         load_table SummaryM2_b
-;         call       delay0.5s
-;         call       CheckB
-;         call       delay0.5s
-;         call       CheckB
-;         call       delay0.5s
-;         call       CheckB
-;         call       delay0.5s
-;         call       CheckB
-;         call       delay0.5s
-;         call       CheckB
-;         goto       Summary
-;
-;;*****PERIODICAL CHECKING INPUT SUBROUTINE************************
-;CheckB
-;         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
-;         andlw		0x0F
-;;test for B key input: Summary
-;         sublw      b'0111'     ;subtract 3 from W: corresponds to letter B on keypad
-;         btfss      STATUS,2    ;check if the z bit is 1--> letter C is pressed indeed: previous operation is success
-;         goto       CheckC        ;otherwise keep checking
-;         ;now if B is pressed
-;         clrf       PORTB
-;         call       ClrLCD
-;         load_table TimeSummary
-;         goto       Check0
-;
-;CheckC
-;         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
-;         andlw		0x0F
-;;test for C key input: Summary
-;         sublw      b'1011'     ;subtract 3 from W: corresponds to letter C on keypad
-;         btfss      STATUS,2    ;check if the z bit is 1--> letter C is pressed indeed: previous operation is success
-;         return;*************************RETURNS HERE***************************
-;         ;now if C is pressed
-;         clrf       PORTB
+nxt_1
+         goto       Check0
+
+Check2
+         swapf		PORTB,W     
+         andlw		0x0F
+;test for 2 key input: Summary
+         sublw      b'0001'     
+         btfss      STATUS,2    
+         goto       Check3           
+         ;now if 2 is pressed
+         clrf       PORTB
+         call       ClrLCD
+         ;CHECK IR BIT
+         btfss  IR2,0 ;if high skip, meaning present
+         goto   load2
+         load_table Candle_P;present
+         goto   nxt_2
+load2
+         load_table  Candle_A
+         goto    nxt_2
+
+nxt_2
+         goto       Check0
+
+Check3
+         swapf		PORTB,W     
+         andlw		0x0F
+;test for 3 key input: Summary
+         sublw      b'0010'     
+         btfss      STATUS,2    
+         goto       Check4           
+         ;now if 3 is pressed
+         clrf       PORTB
+         call       ClrLCD
+         ;CHECK IR BIT
+         btfss  IR3,0 ;if high skip, meaning present
+         goto   load3
+         load_table Candle_P;present
+         goto   nxt_3
+load3
+         load_table  Candle_A
+         goto    nxt_3
+
+nxt_3
+         goto       Check0
+
+Check4
+         swapf		PORTB,W
+         andlw		0x0F
+;test for 4 key input: Summary
+         sublw      b'0100'
+         btfss      STATUS,2
+         goto       Check5           ;***Change
+         ;now if 4 is pressed
+         clrf       PORTB
+         call       ClrLCD
+         ;CHECK IR BIT
+         btfss  IR4,0 ;if high skip, meaning present
+         goto   load4
+         load_table Candle_P;present
+         goto   nxt_4
+load4
+         load_table  Candle_A
+         goto    nxt_4
+
+nxt_4
+         goto       Check0
+
+Check5
+         swapf		PORTB,W
+         andlw		0x0F
+;test for 5 key input: Summary
+         sublw      b'0101'
+         btfss      STATUS,2
+         goto       Check6           ;***Change
+         ;now if 5 is pressed
+         clrf       PORTB
+         call       ClrLCD
+         ;CHECK IR BIT
+         btfss  IR5,0 ;if high skip, meaning present
+         goto   load5
+         load_table Candle_P;present
+         goto   nxt_5
+load5
+         load_table  Candle_A
+         goto    nxt_5
+
+nxt_5
+         goto       Check0
+
+Check6
+         swapf		PORTB,W
+         andlw		0x0F
+;test for 6 key input: Summary
+         sublw      b'0110'
+         btfss      STATUS,2
+         goto       Check7           ;***Change
+         ;now if 6 is pressed
+         clrf       PORTB
+         call       ClrLCD
+         ;CHECK IR BIT
+         btfss  IR6,0 ;if high skip, meaning present
+         goto   load6
+         load_table Candle_P;present
+         goto   nxt_6
+load6
+         load_table  Candle_A
+         goto    nxt_6
+
+nxt_6
+         goto       Check0
+
+Check7
+         swapf		PORTB,W
+         andlw		0x0F
+;test for 7 key input: Summary
+         sublw      b'1000'
+         btfss      STATUS,2
+         goto       Check8           ;***Change
+         ;now if 7 is pressed
+         clrf       PORTB
+         call       ClrLCD
+         ;CHECK IR BIT
+         btfss  IR7,0 ;if high skip, meaning present
+         goto   load7
+         load_table Candle_P;present
+         goto   nxt_7
+load7
+         load_table  Candle_A
+         goto    nxt_7
+
+nxt_7
+         goto       Check0
+
+Check8
+         swapf		PORTB,W
+         andlw		0x0F
+;test for 8 key input: Summary
+         sublw      b'1001'
+         btfss      STATUS,2
+         goto       Check9           ;***Change
+         ;now if 8 is pressed
+         clrf       PORTB
+         call       ClrLCD
+         ;CHECK IR BIT
+         btfss  IR8,0 ;if high skip, meaning present
+         goto   load8
+         load_table Candle_P;present
+         goto   nxt_8
+load8
+         load_table  Candle_A
+         goto    nxt_8
+
+nxt_8
+         goto       Check0
+
+Check9
+         swapf		PORTB,W
+         andlw		0x0F
+;test for 9 key input: Summary
+         sublw      b'1010'
+         btfss      STATUS,2
+
+         return       ;*****************RETURN FROM CHECK HERE*************;
+
+         ;now if 9 is pressed
+         clrf       PORTB
+         call       ClrLCD
+         ;CHECK IR BIT
+         btfss  IR9,0 ;if high skip, meaning present
+         goto   load9
+         load_table Candle_P;present
+         goto   nxt_9
+load9
+         load_table  Candle_A
+         goto    nxt_9
+
+nxt_9
+         goto       Check0
+
+
+Check0   ;Going back to summary menu: WORKS
+         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
+         andlw		0x0F
+;test for 0 key input: Summary
+         sublw      b'1101'     ;subtract 3 from W: corresponds to letter 0 on keypad
+         btfss      STATUS,2    ;check if the z bit is 1--> letter 0 is pressed indeed: previous operation is success
+         goto       Check0
+         clrf       PORTB
+         goto       summaryMenu  ;
+
+
+
+; old results summary
 ;         call       ClrLCD
 ;         load_table Results_1
 ;         call       Switch_Lines
 ;         load_table Results_2
-;         goto       Check0
-;
-;Check0   ;Going back to summary menu: WORKS
-;         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
-;         andlw		0x0F
-;;test for 0 key input: Summary
-;         sublw      b'1101'     ;subtract 3 from W: corresponds to letter 0 on keypad
-;         btfss      STATUS,2    ;check if the z bit is 1--> letter 0 is pressed indeed: previous operation is success
-;         goto       Check0
-;         clrf       PORTB
-;         goto       Summary  ;
-;
-;
-;; old results summary
-;;         call       ClrLCD
-;;         load_table Results_1
-;;         call       Switch_Lines
-;;         load_table Results_2
-;
-;Stop      goto      Stop
-;
+
+Stop      goto      Stop
+
 ;***********************END MAIN************************************************
 
 
@@ -436,63 +643,7 @@ Switch_Lines
 		return
 
 
-startIR
 
-
-   ; bcf		INTCON,GIE	;disable global interrupt
-
-        movlw	B'00000110'	;configure ADCON1  ---> this makes AN0-AN8 the only Analogue inputs, volatge ref. set to source
-		movwf	ADCON1
-
-		movlw	B'00100110'	;configure ADCON2   bit 7=0 Left justified      bits 5:3=AD acquisition time: 8*Tad= 100    bits 2:0= conversion clock set to Tosc 64=110
-		movwf	ADCON2
-
-		clrf   	TRISD		;configure PORTB as output Okay for now, but not needed later!
-;bra		ADSTART
-
-
-;***************************************************************
-; MAIN PROGRAM
-;***************************************************************
-ADSTART
-        ;AN0
-        movlw   B'00000001' ;ADON=1 for AN0
-        movwf   ADCON0
-        call	AD_CONV	;call the A2D subroutine
-     	movf	ADRESH,WREG	;move the high 8-bits to W
-        movwf   temp;IR1
-        btfss   temp,7  ;skip if temp is high
-        goto    setPresent_0
-        movlw   b'00000000' ;set IR1 to 0: absent
-        movwf   IR1
-        goto    next
-setPresent_0
-        movlw   b'00000001'
-        movwf   IR1
-        goto    next
-
-next
-; movf    ADRESL,WREG    ;move the low 8-bits to W
-       ; movwf   IR2
-;debugging
-;movff    IR1,WREG ;into WREG
-;movwf	PORTD	;display the high 8-bit result to the LEDs
-;call    delay5ms
-;;goto    ADSTART ;THIS WAS A HUGE PAIN!!!! before it was call!
-;here goto here
-
-return
-
-AD_CONV
-;        movlw	B'00000001'	;configure ADCON0       set ADON to 1 to turn on AD conversion, input from AN0
-;     	movwf	ADCON0
-     	bsf		ADCON0,1	;start the conversion   set GO/DONE bit to 1 to start conversion
-
-WAIT	btfsc	ADCON0,1	;wait until the conversion is completed by checking GO/DONE bit once it's 0
-     	bra		WAIT		;poll the GO bit in ADCON0
-;put after call to subroutine     	movf	ADRESH,W	;move the high 8-bit to W
-     	;call delay1s
-        return
 
 
 

@@ -1,1 +1,1 @@
-;extern IR1, IR2;, IR3, IR4, IR5, IR6, IR7, IR8, IR9
+extern temp, IR1, IR2, IR3, IR4, IR5, IR6, IR7, IR8, IR9
