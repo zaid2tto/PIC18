@@ -1,1 +1,1 @@
-extern  delay44us,delay5ms,delay0.5s,delay1s,delay3s,delay10s
+extern  delay44us,delay5ms,delay100ms, delay0.5s,delay1s,delay3s,delay10s

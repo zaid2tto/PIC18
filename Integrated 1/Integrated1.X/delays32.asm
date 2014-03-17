@@ -6,7 +6,7 @@
 
 
 code
-global delay44us,delay5ms,delay0.5s,delay1s,delay3s,delay10s
+global delay44us,delay5ms,delay100ms, delay0.5s,delay1s,delay3s,delay10s
 
 ;****************************delay44us*****************************************
 cblock
@@ -53,6 +53,31 @@ lA  	goto	delay5ms_0
 
 			;4 cycles (including call)
 	return
+;*************************delay100ms*******************************************
+delay100ms
+cblock
+	u1
+	u2
+	u3
+	endc
+
+			;800000 cycles
+	movlw	0x6D
+	movwf	u1
+	movlw	0xBF
+	movwf	u2
+	movlw	0x02
+	movwf	u3
+delay100ms_0
+	decfsz	u1, f
+	goto	here1
+	decfsz	u2, f
+here1	goto    here2
+	decfsz	u3, f
+here2	goto	delay100ms_0
+
+    return
+
 ;******************delay0.5s****************************************************
 cblock
 	b1

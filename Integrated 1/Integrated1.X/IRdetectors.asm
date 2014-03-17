@@ -7,26 +7,23 @@ code
 global startIR
 
 startIR
-
-
-   ; bcf		INTCON,GIE	;disable global interrupt
-;         movlw   b'00000110'
-;         movwf   CMCON
-         setf    TRISA       ;problem with AN3,4 dont recieve negative input!
-;        setf    TRISE   ;AN5-7
-         bsf     TRISB,2    ;this works!!
-         bsf     TRISB,3
-        ; bcf     PORTB,2
-        ; bcf     PORTB,3
-
         movlw	B'00000101'	;configure ADCON1  ---> this makes AN0-AN9 the only Analogue inputs, volatge ref. set to source
 		movwf	ADCON1
-
-		movlw	B'00100110'	;configure ADCON2   bit 7=0 Left justified      bits 5:3=AD acquisition time: 8*Tad= 100    bits 2:0= conversion clock set to Tosc 64=110
+        ;SET TRIS HERE
+        setf    TRISA
+;        setf    TRISE
+;        bsf     TRISB,2    ;this works!!
+;        bsf     TRISB,3
+;        clrf    PORTA
+;        clrf    PORTE
+;        clrf    PORTB
+;        bcf     PORTB,2
+;        bcf     PORTB,3
+        ;changed acquisition time from 8Tad to 20Tad and Fosc from 32 to 64
+		movlw	B'00111110'	;configure ADCON2   bit 7=0 Left justified      bits 5:3=AD acquisition time: 20*Tad= 111    bits 2:0= conversion clock set to Tosc 64=110
 		movwf	ADCON2
 
-		;clrf   	TRISD		;configure PORTB as output Okay for now, but not needed later!
-;bra		ADSTART
+        goto    ADSTART
 
 
 ADSTART
@@ -194,13 +191,17 @@ next9
 
 return
 
+
+
 AD_CONV
-;        movlw	B'00000001'	;configure ADCON0       set ADON to 1 to turn on AD conversion, input from AN0
-;     	movwf	ADCON0
+        call    delay100ms
+        ;call    delay5ms
      	bsf		ADCON0,1	;start the conversion   set GO/DONE bit to 1 to start conversion
 
 WAIT	btfsc	ADCON0,1	;wait until the conversion is completed by checking GO/DONE bit once it's 0
      	bra		WAIT		;poll the GO bit in ADCON0
+
+        movff   ADRESH,temp
 ;put after call to subroutine     	movf	ADRESH,W	;move the high 8-bit to W
      	;call delay1s
         return

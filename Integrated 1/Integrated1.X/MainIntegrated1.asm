@@ -5,7 +5,7 @@
 #include <delays32.inc>
 ;#include <delays.inc>
 #include <Motor.inc>
-#include <IRdetectors.inc>
+;#include <IRdetectors.inc>
 
 
 		list P=18F4620, F=INHX32, C=160, N=80, ST=OFF, MM=OFF, R=DEC
@@ -189,9 +189,9 @@ Mainline
 ;;		  clrf		TRISC
 		  clrf		TRISD
 ;;*****CLEARING IS IMPORTANT SO is calling InitLCD
-;;         clrf      PORTA
-;;         clrf      PORTB
-;;         clrf      PORTC
+         clrf      PORTA
+         clrf      PORTB
+         clrf      PORTC
          clrf      PORTD
 ;
           call      delay5ms		;wait for LCD to start up
@@ -231,7 +231,8 @@ test     btfss		PORTB,1   ;Wait until data is available from the keypad
          load_table Testing_Msg
          ;************************START OF OPERATIONS**************************;
 
-         ;include delay?
+         call   delay1s
+         call   delay1s
          call   MotorRight ;WORKS!
          ;call   delay1s
          ; reset ports/bits
@@ -247,7 +248,7 @@ test     btfss		PORTB,1   ;Wait until data is available from the keypad
          call   ClrLCD
          load_table Stage2_Msg ;IR done
        ; testing results
-         call   delay1s
+  ;       call   delay1s
          call   delay1s
          call   ClrLCD
          call   delay0.5s
@@ -278,15 +279,16 @@ test     btfss		PORTB,1   ;Wait until data is available from the keypad
         load_table  Stage3_Msg
         call    Switch_Lines
         load_table  Stage3b_Msg
-        call    delay3s
+        call    delay1s
+   ;     call    delay3s
 
 ;         ; reset ports/bits
          call   MotorLeft  ;--->WORKS TESTED
          call   delay44us
          call   ClrLCD
          load_table Stage4_Msg  ;Switches off
-         call   delay1s
-         call   delay1s
+   ;      call   delay1s
+  ;       call   delay1s
          call   delay0.5s
 
 
@@ -643,7 +645,199 @@ Switch_Lines
 		return
 
 
+;**************IR****************************
+startIR
+        movlw	B'00000101'	;configure ADCON1  ---> this makes AN0-AN9 the only Analogue inputs, volatge ref. set to source
+		movwf	ADCON1
+        ;SET TRIS HERE
+;        setf    TRISA
+;        setf    TRISE
+         bsf     TRISB,0
+         bsf     TRISB,1
+         bsf     TRISB,2    ;this works!!
+         bsf     TRISB,3
+;        clrf    PORTA
+;        clrf    PORTE
+;        clrf    PORTB
+;        bcf     PORTB,2
+;        bcf     PORTB,3
+        ;changed acquisition time from 8Tad to 20Tad and Fosc from 32 to 64
+		movlw	B'00111110'	;configure ADCON2   bit 7=0 Left justified      bits 5:3=AD acquisition time: 20*Tad= 111    bits 2:0= conversion clock set to Tosc 64=110
+		movwf	ADCON2
 
+        bra     ADSTART
+
+
+ADSTART
+        ;AN1
+        call    delay0.5s
+        movlw   B'00000001' ;ADON=1 ;*AN1 and AN9 not working for now dk why? so imma try AN0 for AN1
+        movwf   ADCON0
+        call	AD_CONV	;call the A2D subroutine
+     	;ADRESH is already in temp
+        btfss   temp,7  ;skip if temp is high
+        goto    setPresent_1                            ;*to change
+        movlw   b'00000000' ;set IRx to 0: absent
+        movwf   IR1                                     ;*to change
+        goto    next1                                    ;*to change
+setPresent_1                                            ;*to change
+        movlw   b'00000001'
+        movwf   IR1
+        call    delay0.5s                          ;*to change
+        goto    next1                                    ;*to change
+
+next1                                                    ;*to change
+        ;AN2
+        movlw   B'00001001' ;ADON=1 for AN2             *to change
+        movwf   ADCON0
+        call	AD_CONV	;call the A2D subroutine
+        btfss   temp,7  ;skip if temp is high
+        goto    setPresent_2                            ;*to change
+        movlw   b'00000000' ;set IRx to 0: absent
+        movwf   IR2                                     ;*to change
+        goto    next2                                    ;*to change
+setPresent_2                                            ;*to change
+        movlw   b'00000001'
+        movwf   IR2
+        call    delay0.5s        ;*to change
+        goto    next2                                    ;*to change
+
+next2                                                    ;*to change
+        ;AN3
+        movlw   B'00001101' ;ADON=1 for AN3             *to change
+        movwf   ADCON0
+        call	AD_CONV	;call the A2D subroutine
+        btfss   temp,7  ;skip if temp is high
+        goto    setPresent_3                            ;*to change
+        movlw   b'00000000' ;set IRx to 0: absent
+        movwf   IR3                                     ;*to change
+        goto    next3                                    ;*to change
+setPresent_3                                            ;*to change
+        movlw   b'00000001'
+        movwf   IR3
+        call    delay0.5s        ;*to change
+        goto    next3                                    ;*to change
+
+next3
+        ;AN4
+        movlw   B'00010001' ;ADON=1 for AN4             *to change
+        movwf   ADCON0
+        call	AD_CONV	;call the A2D subroutine
+        btfss   temp,7  ;skip if temp is high
+        goto    setPresent_4                            ;*to change
+        movlw   b'00000000' ;set IRx to 0: absent
+        movwf   IR4                                     ;*to change
+        goto    next4                                    ;*to change
+setPresent_4                                            ;*to change
+        movlw   b'00000001'
+        movwf   IR4
+        call    delay0.5s        ;*to change
+        goto    next4                                    ;*to change
+
+next4
+        ;AN5
+        movlw   B'00010101' ;ADON=1 for AN5             *to change
+        movwf   ADCON0
+        call	AD_CONV	;call the A2D subroutine
+        btfss   temp,7  ;skip if temp is high
+        goto    setPresent_5                            ;*to change
+        movlw   b'00000000' ;set IRx to 0: absent
+        movwf   IR5                                     ;*to change
+        goto    next5                                    ;*to change
+setPresent_5                                            ;*to change
+        movlw   b'00000001'
+        movwf   IR5
+        call    delay0.5s        ;*to change
+        goto    next5                                    ;*to change
+
+next5
+        ;AN6
+        movlw   B'00011001' ;ADON=1 for AN6             *to change
+        movwf   ADCON0
+        call	AD_CONV	;call the A2D subroutine
+        btfss   temp,7  ;skip if temp is high
+        goto    setPresent_6                            ;*to change
+        movlw   b'00000000' ;set IRx to 0: absent
+        movwf   IR6                                     ;*to change
+        goto    next6                                    ;*to change
+setPresent_6                                            ;*to change
+        movlw   b'00000001'
+        movwf   IR6
+        call    delay0.5s                                 ;*to change
+        goto    next6                                    ;*to change
+
+next6
+        ;AN7
+        movlw   B'00011101' ;ADON=1 for AN7             *to change
+        movwf   ADCON0
+        call	AD_CONV	;call the A2D subroutine
+        btfss   temp,7  ;skip if temp is high
+        goto    setPresent_7                            ;*to change
+        movlw   b'00000000' ;set IRx to 0: absent
+        movwf   IR7                                     ;*to change
+        goto    next7                                    ;*to change
+setPresent_7                                            ;*to change
+        movlw   b'00000001'
+        movwf   IR7
+        call    delay0.5s                                    ;*to change
+        goto    next7                                    ;*to change
+
+next7
+        ;AN8
+        movlw   B'00100001' ;ADON=1 for AN8             *to change
+        movwf   ADCON0
+        call	AD_CONV	;call the A2D subroutine
+        btfss   temp,7  ;skip if temp is high
+        goto    setPresent_8                            ;*to change
+        movlw   b'00000000' ;set IRx to 0: absent
+        movwf   IR8                                     ;*to change
+        goto    next8                                    ;*to change
+setPresent_8                                            ;*to change
+        movlw   b'00000001'
+        movwf   IR8
+        call    delay0.5s                                    ;*to change
+        goto    next8                                    ;*to change
+
+next8
+        ;AN9
+        movlw   B'00110001' ;ADON=1 for ;SINCE AN9 & AN10 is not working gonna try AN12-RB0, and AN12-RB0 ;AN9             *to change
+        movwf   ADCON0
+        call	AD_CONV	;call the A2D subroutine
+        btfss   temp,7  ;skip if temp is high
+        goto    setPresent_9                            ;*to change
+        movlw   b'00000000' ;set IRx to 0: absent
+        movwf   IR9                                     ;*to change
+        goto    next9                                    ;*to change
+setPresent_9                                            ;*to change
+        movlw   b'00000001'
+        movwf   IR9                                     ;*to change
+        goto    next9                                    ;*to change
+
+next9
+; movf    ADRESL,WREG    ;move the low 8-bits to W
+       ; movwf   IR2
+;debugging
+;movff    IR1,WREG ;into WREG
+;movwf	PORTD	;display the high 8-bit result to the LEDs
+;call    delay5ms
+;;goto    ADSTART ;THIS WAS A HUGE PAIN!!!! before it was call!
+;here goto here
+
+return
+
+
+
+AD_CONV
+
+     	bsf		ADCON0,1	;start the conversion   set GO/DONE bit to 1 to start conversion
+
+WAIT	btfsc	ADCON0,1	;wait until the conversion is completed by checking GO/DONE bit once it's 0
+     	bra		WAIT		;poll the GO bit in ADCON0
+
+        movff   ADRESH,temp
+;put after call to subroutine     	movf	ADRESH,W	;move the high 8-bit to W
+     	;call delay1s
+        return
 
 
 
