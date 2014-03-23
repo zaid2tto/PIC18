@@ -34,26 +34,43 @@ Mainline
     
     clrf      INTCON         ; No interrupts
 
-    clrf      TRISA          ; All port A is output
-    clrf      TRISB		     ; All port B is output
-    clrf      TRISC          ; All port C is output
+    setf      TRISB		     ; All port B is input
+    clrf      TRISD
 
-    ;Different ways of making RD1 an output
-    ;clrf      TRISD          ; All port D is output
-    bcf     TRISD,1         ;This works too
-   ; movlw   B'11111101'     ;make pin1 out
-   ; movwf   TRISD
+    clrf      PORTB
+    clrf      PORTD
 
-    ;clears any residual data
-         clrf      PORTA
-         clrf      PORTB
-         clrf      PORTC
-         clrf      PORTD
+; D0 right D1 left
 
-loop
-    btg     PORTD,1
-    call    delay3s
-    goto    loop
+
+CheckA
+         bcf        PORTD,1     ;turn motor left off
+         bcf        PORTD,0     ;turn motor right off
+         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
+         andlw		0x0F
+;test for B key input: Summary
+         sublw      b'0011'     ;subtract 3 from W: corresponds to letter A on keypad
+         btfss      STATUS,2    ;check if the z bit is 1--> letter C is pressed indeed: previous operation is success
+         goto       CheckC        ;otherwise keep checking ******CHANGE
+         ;now if B is pressed
+         bsf        PORTD,0 ;pulse motor right
+         clrf       PORTB
+         goto       CheckA
+
+CheckC
+         bcf        PORTD,0 ;turn motor right off
+         bcf        PORTD,1
+         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
+         andlw		0x0F
+;test for C key input: Summary
+         sublw      b'1011'     ;subtract 3 from W: corresponds to letter C on keypad
+         btfss      STATUS,2    ;check if the z bit is 1--> letter C is pressed indeed: previous operation is success
+         goto       CheckA      ;CheckA
+         ;now if C is pressed
+         bsf        PORTD,1 ;turn motor left on
+         clrf       PORTB
+         goto       CheckC
+
 
 
 END
