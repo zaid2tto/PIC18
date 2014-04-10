@@ -1,13 +1,20 @@
-;AER201: Team 52: Zaid Atto, Varun Sharma, Anastasyia Martyts
-;Code developed and maintained by Zaid Atto, EngSci 1T6
-;Final Remarks: April 10, 2014
-;It was a blast!
+;**************************USE THIS ONE*****************************************
+;*********************
+;Binary digital number conversion solved issue here ?>
+;KPHexToChar
+;          addwf     PCL,f
+;          dt        "123A456B789C*0#D"
 
-;*************************
+
+;---------------------->NEED MORE DELAYS FOR MOTOR*
+;******************************
 #include <p18f4620.inc>
 #include <lcd18.inc>
+; no longer 10Mhz #include <delays.inc>
 #include <delays32.inc>
+;#include <delays.inc>
 #include <Motor.inc>
+;#include <IRdetectors.inc>
 #include <Relays.inc>
 #include <rtc_macros.inc>
 
@@ -31,6 +38,7 @@
 		CONFIG EBTR0 = OFF, EBTR1 = OFF, EBTR2 = OFF, EBTR3 = OFF
 		CONFIG EBTRB = OFF
 
+;;;;;;Equates;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;*******************************************************************
 ;Constant Defines
 ;*******************************************************************
@@ -65,7 +73,6 @@ udata
     LD7 res 1
     LD8 res 1
     LD9 res 1
-    ;RTC related
     startHt res 1
     startHo res 1
     startMt res 1
@@ -79,9 +86,22 @@ udata
     endSt res 1
     endSo res 1
 
+;dont really need these
+global  temp, IR1, IR2, IR3, IR4, IR5, IR6, IR7, IR8, IR9
+
+
+;    temp EQU 0x74
+;    IR2 EQU 0x76
+;    IR3 EQU 0x77
+;    IR4 EQU 0x78
+;    IR5 EQU 0x79
+;    IR6 EQU 0x80
+;    IR7 EQU 0x81
+;    IR8 EQU 0x82
+;    IR9 EQU 0x83
+
 
 ;******************************MACROS*******************************************
-;Used to load a table of text onto LCD
 load_table macro Table
           movlw		upper Table
 		  movwf		TBLPTRU
@@ -100,7 +120,6 @@ Again:
 
 endm
 ;*************************************************************************
-;Dictates required LCD settings
 LCDSettings macro
           movlw     B'00101000'    ; 4 bits, 2 lines,5X7 dots seems to work best instead of the above setting
           call      WR_INS
@@ -113,33 +132,30 @@ LCDSettings macro
           call      WR_INS
 endm
 ;**************************************************************************
-;Starts ADC conversion
 startConversion macro
         call     AD_CONV1
-        call     delay1s 
+        call     delay1s ;was 1s
         call     AD_CONV2
-        call     delay1s
+        call     delay1s ;was 1s
         call     AD_CONV3
 endm
 ;*************************************************************************
-;Checks IR ADC results and stores results in a corresponding IRx register
 IRchecker macro IRx
 local   setPresent, next
-        btfss   temp,0  ; old code: skip if temp 7 is high
-        bra     setPresent                            
+        btfss   temp,7  ;skip if temp is high
+        bra     setPresent                            ;*to change
         movlw   b'00000000' ;set IRx to 0: absent
-        movwf   IRx                                   
-        bra     next                                  
-setPresent                                            
+        movwf   IRx                                     ;*to change
+        bra     next                                    ;*to change
+setPresent                                            ;*to change
         movlw   b'00000001'
         movwf   IRx
-        call    delay0.5s                          
-        bra    next                                   
+        call    delay0.5s                          ;*to change
+        bra    next                                    ;*to change
 
 next
 endm
 ;*************************************************************************
-;Checks LD ADC results and stores results in a corresponding IRx register
 LDAN macro LDx
 local checkNonFlickering_0, setOff_0,nextcdl_0, setNonFlickering_0,checkFlickering_0
 ;Now conversions done: do calculations
@@ -159,7 +175,7 @@ setOff_0
         bra    nextcdl_0
 
 checkNonFlickering_0 ;;;;THIS IS EFFY
-        movlw   b'00100000' ;for my 6v circuit it was 00100110; this 001 is when tested with the actual circut from varun
+        movlw   b'00100000' ;for my 6v circuit it was 00100110; this 001 is when tested with the actual circut from varun 
         cpfseq   temp1          ;if temp equal WREG skip next
         bra    checkFlickering_0
         cpfseq   temp2
@@ -182,8 +198,7 @@ checkFlickering_0 ;for now by default becomes true---> later should also test, i
 nextcdl_0
 
 endm
-;******************************************************************************
-;Displays results on LCD given the IR and LD registers corresponding to a candlelight
+
 displayResults macro IRx, LDx
 local   load1, Lstatus, ifNF, ifF, nxt_1, ERR
 
@@ -241,8 +256,6 @@ Greeting
 
 Testing_Prompt      ;needs shifting
         db      "To Test Press A",0
-startRTC
-        db      "Press B: RTC",0
 
 Testing_Msg
         db      "Testing...",0
@@ -273,27 +286,20 @@ SummaryM2_a
         db      "Press B: RTC",0
 SummaryM2_b
         db      "Press C: Summary",0
-Restart
-        db      "Press D: Restart",0
 Candle_P
         db      "Candle Present",0
 Candle_A
         db      "Candle Absent",0
 Light_Off
         db      "Light Off",0
-TimeSummary
-        db      "Tot.Time:35s",0
 Light_NF
         db      "Non-Flickering",0
 Light_F
         db      "Flickering",0
 error_m
         db      "Error",0
-start_t
-        db      "Start:",0
-end_t
-        db      "End:  ",0
-
+TimeSummary
+        db      "Tot.Time:XXX sec",0
 
 ;*****************************MAIN CODE*****************************************
 Mainline
@@ -302,45 +308,46 @@ Mainline
     movwf		OSCCON
 	bsf         OSCTUNE, 6  ;activate PLL multiplier to boost to 32Mhz
 
+;;In the beginning only LCD is used hence only port D
+;          clrf		TRISA ;IMP
+;		  clrf		TRISB
+;		  clrf		TRISC
          ;Need those for relays
 		 bcf        TRISC,5
          bcf        TRISC,7
-;In the beginning only LCD is used hence only port D
          clrf		TRISD
-;*****CLEARING IS IMPORTANT SO is calling InitLCD
+;;*****CLEARING IS IMPORTANT SO is calling InitLCD
          clrf      PORTA
          clrf      PORTB
          clrf      PORTC
          clrf      PORTD
 
          call      RTCsetup
-         call      delay5ms		;wait for LCD to start up
-         call      delay5ms
+
+;
+          call      delay5ms		;wait for LCD to start up
+          call      delay5ms
 
           ;*VERY IMP*
-         call      InitLCD
-         LCDSettings
+          call      InitLCD
+          LCDSettings
 ;;;;;;;;;;Display first prompt
-
+          ;call  ClrLCD
+          load_table  Greeting
+          call      Switch_Lines
+          load_table  Testing_Prompt
 
 ;;;;;;;;;;;;;;;;;Get Input from Keypad;;;;;;;;;;;;;;;
 
-         ;IMP
+
          clrf      INTCON         ; No interrupts
 
 
          movlw     b'11110010'    ; Set required keypad inputs
          movwf     TRISB
 
-
-startMenu
-         call       ClrLCD
-         load_table Testing_Prompt
-         call       Switch_Lines
-         load_table startRTC
-
-testA    btfss		PORTB,1   ;Wait until data is available from the keypad
-         goto		testA
+test     btfss		PORTB,1   ;Wait until data is available from the keypad
+         goto		test
 
          swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
          andlw		0x0F
@@ -348,23 +355,8 @@ testA    btfss		PORTB,1   ;Wait until data is available from the keypad
         ;test for A key input
          sublw      b'0011'     ;subtract 3 from W: corresponds to A letter on keypad
          btfss      STATUS,2    ;check if the z bit is 1--> letter A is pressed indeed: previous operation is success
-         goto       testB        ;otherwise keep checking
+         goto       test        ;otherwise keep checking
          ;now if A is pressed, we want to clear screen and display something else
-         call       ClrLCD
-         goto       startOperation
-testB
-         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
-         andlw		0x0F
-        ;test for B key input
-         sublw      b'0111'     ;subtract 3 from W: corresponds to B letter on keypad
-         btfss      STATUS,2    ;check if the z bit is 1--> letter B is pressed indeed: previous operation is success
-         goto       testA        ;otherwise keep checking
-         ;call rtc start
-         call       RTC
-         goto       startMenu
-
-
-startOperation
 
 ;Get start Time
          call       getStartTime
@@ -378,11 +370,13 @@ startOperation
          call   delay1s
          call   MotorRight ;WORKS!
          ;call   delay1s
+         ; reset ports/bits
          call   ClrLCD
          load_table Stage1_Msg
          call   delay1s
          call   ClrLCD
          load_table Testing_Msg
+
 
 ;******NEED TO TURN ON THE RELAY for IR********
 ;use RC5,7 to signal relays
@@ -424,9 +418,11 @@ startOperation
          call   getEndTime
 
          goto   summaryMenu
-
+            ;problem wiith not returning back from checking
 summaryMenu
-
+         ;movlw      B'00000000' ;it's just not happening!!!! why????!!!
+         ;movwf      PORTB
+         ;clrf       PORTB
          call       ClrLCD
          load_table SummaryM1_a ;choose candle #
          call       Switch_Lines
@@ -456,17 +452,6 @@ summaryMenu
          call       CheckB
          call       delay0.5s
          call       CheckB
-
-         call       ClrLCD
-         load_table Restart
-
-         call       delay0.5s
-         call       CheckB
-         call       delay0.5s
-         call       CheckB
-         call       delay0.5s
-         call       CheckB
-
          goto       summaryMenu
 
 ;*****PERIODICAL CHECKING INPUT SUBROUTINE************************
@@ -476,12 +461,12 @@ CheckB
 ;test for B key input: Summary
          sublw      b'0111'     ;subtract 3 from W: corresponds to letter B on keypad
          btfss      STATUS,2    ;check if the z bit is 1--> letter C is pressed indeed: previous operation is success
-         goto       CheckC        ;otherwise keep checking 
+         goto       CheckC        ;otherwise keep checking ******CHANGE
          ;now if B is pressed
          clrf       PORTB
          call       ClrLCD
-         call       RTC;go to RTC;load_table TimeSummary 
-         goto       summaryMenu
+         goto       RTC;go to RTC;load_table TimeSummary     ;******CHANGE
+         goto       Check0
 
 CheckC
          swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
@@ -489,45 +474,16 @@ CheckC
 ;test for C key input: Summary
          sublw      b'1011'     ;subtract 3 from W: corresponds to letter C on keypad
          btfss      STATUS,2    ;check if the z bit is 1--> letter C is pressed indeed: previous operation is success
-         goto       CheckD           
-;*************************RETURNS HERE***************************
+         goto       Check1           ;***Change
+;old code         return;*************************RETURNS HERE***************************
          ;now if C is pressed
          clrf       PORTB
-
-TimeLabel
          call       ClrLCD
+;         load_table Results_1       ;*Change
+;         call       Switch_Lines
+;         load_table Results_2
          call       displayTimeSummary
-         call       delay1s
-         call       delay1s
-         call       ClrLCD
-         load_table TimeSummary
-         call       delay1s
-         goto       Check0C
-
-Check0C   ;Going back to summary menu: WORKS
-         swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
-         andlw		0x0F
-;test for 0 key input: Summary
-         sublw      b'1101'     ;subtract 3 from W: corresponds to letter 0 on keypad
-         btfss      STATUS,2    ;check if the z bit is 1--> letter 0 is pressed indeed: previous operation is success
-         goto       TimeLabel
-         clrf       PORTB
-         goto       summaryMenu  ;
-
-
-CheckD
-        swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
-         andlw		0x0F
-;test for D key input: Summary
-         sublw      b'1111'     ;subtract 3 from W: corresponds to letter D on keypad
-         btfss      STATUS,2    ;check if the z bit is 1--> letter D is pressed indeed: previous operation is success
-         goto       Check1           
-         ;now if D is pressed
-         clrf       PORTB
-         call       ClrLCD
-         call       delay0.5s
-         goto       Mainline
-         
+         goto       Check0
 
 Check1
          swapf		PORTB,W     ;Read PortB<7:4> into W<3:0>
@@ -570,7 +526,7 @@ Check4
 ;test for 4 key input: Summary
          sublw      b'0100'
          btfss      STATUS,2
-         goto       Check5           
+         goto       Check5           ;***Change
          ;now if 4 is pressed
          clrf       PORTB
          call       ClrLCD
@@ -581,7 +537,7 @@ Check5
 ;test for 5 key input: Summary
          sublw      b'0101'
          btfss      STATUS,2
-         goto       Check6           
+         goto       Check6           ;***Change
          ;now if 5 is pressed
          clrf       PORTB
          call       ClrLCD
@@ -592,7 +548,7 @@ Check6
 ;test for 6 key input: Summary
          sublw      b'0110'
          btfss      STATUS,2
-         goto       Check7          
+         goto       Check7           ;***Change
          ;now if 6 is pressed
          clrf       PORTB
          call       ClrLCD
@@ -604,7 +560,7 @@ Check7
 ;test for 7 key input: Summary
          sublw      b'1000'
          btfss      STATUS,2
-         goto       Check8          
+         goto       Check8           ;***Change
          ;now if 7 is pressed
          clrf       PORTB
          call       ClrLCD
@@ -615,7 +571,7 @@ Check8
          ;test for 8 key input: Summary
          sublw      b'1001'
          btfss      STATUS,2
-         goto       Check9          
+         goto       Check9           ;***Change
          ;now if 8 is pressed
          clrf       PORTB
          call       ClrLCD
@@ -733,51 +689,51 @@ ADSTART
         call	AD_CONV	;call the A2D subroutine
      	;ADRESH is already in temp
         IRchecker IR1
-                                                 
+                                                  ;*to change
         ;AN2
-        movlw   B'00001001' ;ADON=1 for AN2             
+        movlw   B'00001001' ;ADON=1 for AN2             *to change
         movwf   ADCON0
         call	AD_CONV	;call the A2D subroutine
         IRchecker IR2
-                                                  
+                                                  ;*to change
         ;AN3
-        movlw   B'00001101' ;ADON=1 for AN3             
+        movlw   B'00001101' ;ADON=1 for AN3             *to change
         movwf   ADCON0
         call	AD_CONV	;call the A2D subroutine
         IRchecker IR3
 
         ;AN4
-        movlw   B'00010001' ;ADON=1 for AN4             
+        movlw   B'00010001' ;ADON=1 for AN4             *to change
         movwf   ADCON0
         call	AD_CONV	;call the A2D subroutine
         IRchecker IR4
 
         ;AN5
-        movlw   B'00010101' ;ADON=1 for AN5             
+        movlw   B'00010101' ;ADON=1 for AN5             *to change
         movwf   ADCON0
         call	AD_CONV	;call the A2D subroutine
         IRchecker IR5
 
         ;AN6
-        movlw   B'00011001' ;ADON=1 for AN6            
+        movlw   B'00011001' ;ADON=1 for AN6             *to change
         movwf   ADCON0
         call	AD_CONV	;call the A2D subroutine
         IRchecker IR6
 
         ;AN7
-        movlw   B'00011101' ;ADON=1 for AN7             
+        movlw   B'00011101' ;ADON=1 for AN7             *to change
         movwf   ADCON0
         call	AD_CONV	;call the A2D subroutine
         IRchecker IR7
 
         ;AN8
-        movlw   B'00100001' ;ADON=1 for AN8             
+        movlw   B'00100001' ;ADON=1 for AN8             *to change
         movwf   ADCON0
         call	AD_CONV	;call the A2D subroutine
         IRchecker IR8
 
         ;AN9
-        movlw   B'00110001' ;ADON=1 for ;SINCE AN9 & AN10 is not working gonna try AN12-RB0, and AN12-RB0 ;AN9            
+        movlw   B'00110001' ;ADON=1 for ;SINCE AN9 & AN10 is not working gonna try AN12-RB0, and AN12-RB0 ;AN9             *to change
         movwf   ADCON0
         call	AD_CONV	;call the A2D subroutine
         IRchecker IR9
@@ -906,7 +862,7 @@ WAIT3	btfsc	ADCON0,1
 
 ;********************************* macro related subroutines*******************
 loadP
-         load_table Candle_P
+         load_table Candle_P;present
 return
 
 loadA
@@ -1027,7 +983,7 @@ Check00   ;Going back to summary menu: WORKS
          btfss      STATUS,2    ;check if the z bit is 1--> letter 0 is pressed indeed: previous operation is success
          goto       show_RTC
          clrf       PORTB
-         return 
+         goto       summaryMenu
 
 
 
@@ -1082,8 +1038,6 @@ return
 displayTimeSummary
 ;Starting time first
         ;hours
-        load_table  start_t
-
 		movf	startHt,WREG
 		call	WR_DATA
 		movf	startHo,WREG
@@ -1107,7 +1061,6 @@ displayTimeSummary
 
         call    Switch_Lines
 ;end time second
-        load_table  end_t
         ;hours
 		movf	endHt,WREG
 		call	WR_DATA

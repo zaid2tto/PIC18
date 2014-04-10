@@ -1,7 +1,7 @@
+
+
+
 #include <p18f4620.inc>
-;these delays are obtained for a 32MHz clock source from
-;http://www.piclist.com/techref/piclist/codegen/delay.htm
-;
 ;****************************DELAYS FOR 32Mhz**********************************
 
 

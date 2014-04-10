@@ -65,7 +65,7 @@ INIT	bcf		INTCON,GIE	;disable global interrupt
 ;		movwf	ADCON2
 
 ;Slower sampling
-        movlw	B'00000101'	;configure ADCON1  ---> this makes AN0-AN9 the only Analogue inputs, volatge ref. set to source
+        movlw	B'0000101'	;configure ADCON1  ---> this makes AN0-AN9 the only Analogue inputs, volatge ref. set to source
 		movwf	ADCON1
         movlw	B'00111110'	;configure ADCON2   bit 7=0 Left justified      bits 5:3=AD acquisition time: 20*Tad= 111    bits 2:0= conversion clock set to Tosc 64=110
 		movwf	ADCON2
@@ -73,28 +73,36 @@ INIT	bcf		INTCON,GIE	;disable global interrupt
 ;        setf    TRISA
 ;        setf    TRISB
         setf    TRISE
-
 		clrf   	TRISD		;configure PORTB as output Okay for now, but not needed later!
-		bra		ADSTART
+        
+;        ;let LD relay on
+;        bcf     TRISC,7
+;        bsf     PORTC,7
+        ;let IR relay on
+        bcf     TRISC,5
+        bsf     PORTC,5
+
+
+bra		ADSTART
 
 
 ;***************************************************************
 ; MAIN PROGRAM
 ;***************************************************************
 ADSTART
-        AN0
-        movlw   B'00000001' ;ADON=1 for AN0
-        movwf   ADCON0
-        rcall	AD_CONV	;call the A2D subroutine
-     	movf	ADRESH,WREG	;move the high 8-bits to W
-        movwf   AN0h
-        movf    ADRESL,WREG    ;move the low 8-bits to W
-        movwf   AN0l
-;debugging
-movff    AN0h,WREG ;into WREG
-movwf	PORTD	;display the high 8-bit result to the LEDs
-call    delay5ms
-call    ADSTART
+;        AN0
+;        movlw   B'00000001' ;ADON=1 for AN0
+;        movwf   ADCON0
+;        rcall	AD_CONV	;call the A2D subroutine
+;     	movf	ADRESH,WREG	;move the high 8-bits to W
+;        movwf   AN0h
+;        movf    ADRESL,WREG    ;move the low 8-bits to W
+;        movwf   AN0l
+;;debugging
+;movff    AN0h,WREG ;into WREG
+;movwf	PORTD	;display the high 8-bit result to the LEDs
+;call    delay5ms
+;call    ADSTART
 ;;*******************************************************************************
 ;;        ;AN1
 ;        movlw   B'00010001' ;ADCON=1 for AN1
@@ -125,7 +133,7 @@ call    ADSTART
 ;;call    delay5ms
 ;call    ADSTART
 ;
-;;*******************************************************************************
+;;;*******************************************************************************
 ;        ;AN3
 ;        movlw   B'00001101' ;ADON=1 for AN3
 ;        movwf   ADCON0
@@ -141,17 +149,19 @@ call    ADSTART
 ;goto    ADSTART
 
 ;;*******************************************************************************
-;        ;AN4
-;        movlw   B'01000001' ;ADCON=1 for AN1
-;        movwf   ADCON0
-;        rcall	AD_CONV	;call the A2D subroutine
-;     	movf	ADRESH,WREG	;move the high 8-bits to W
-;        movwf   AN4h
-;        movf    ADRESL,WREG    ;move the low 8-bits to W
-;        movwf   AN4l
-;;debugging
-;movff    AN4h,WREG ;into WREG
-;movwf	PORTD	;display the high 8-bit result to the LEDs
+        ;AN4
+        movlw   B'00010001' ;ADCON=1 for AN1
+        movwf   ADCON0
+        rcall	AD_CONV	;call the A2D subroutine
+     	movf	ADRESH,WREG	;move the high 8-bits to W
+        movwf   AN4h
+        movf    ADRESL,WREG    ;move the low 8-bits to W
+        movwf   AN4l
+;debugging
+movff    AN4h,WREG ;into WREG
+movwf	PORTD	;display the high 8-bit result to the LEDs
+call    delay5ms
+goto    ADSTART
 ;
 ;;*******************************************************************************
 ;        ;AN5
